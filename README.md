@@ -29,6 +29,10 @@ Cloud
     cf bind-service spring-demo spring-demo-db
     cf start spring-demo
 
+If you want to use the "manifest.yml" file to save typing the parameters for
+the comman "cf push", you probably need to edit the file prior to execution
+of "cf push".
+
 Configuration
 -------------
 

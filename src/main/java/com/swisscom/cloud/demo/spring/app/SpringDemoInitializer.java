@@ -23,11 +23,6 @@ public class SpringDemoInitializer implements WebApplicationInitializer {
     public void onStartup(ServletContext context) throws ServletException {
         AnnotationConfigWebApplicationContext ctx = new AnnotationConfigWebApplicationContext();
 
-        // TODO: This is a WORKAROUND, should be the buildpack's duty
-        if (System.getenv("VCAP_APPLICATION") != null) {
-            ctx.getEnvironment().addActiveProfile("cloud");
-        }
-
         ctx.register(SpringDemoWebApplication.class);
         context.addListener(new ContextLoaderListener(ctx));
         ctx.setServletContext(context);

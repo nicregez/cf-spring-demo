@@ -4,9 +4,7 @@
  */
 package com.swisscom.cloud.demo.spring.app;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.Arrays;
 
 import javax.annotation.Resource;
 import javax.persistence.EntityManagerFactory;
@@ -20,7 +18,6 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.core.env.Environment;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
@@ -36,8 +33,6 @@ import org.springframework.web.servlet.config.annotation.EnableWebMvc;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurerAdapter;
 import org.springframework.web.servlet.view.JstlView;
 import org.springframework.web.servlet.view.UrlBasedViewResolver;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * @author Nicolas Regez
@@ -82,7 +77,7 @@ public class SpringDemoWebApplication extends WebMvcConfigurerAdapter {
     @Bean
     public LocalContainerEntityManagerFactoryBean entityManagerFactoryBean() {
         LocalContainerEntityManagerFactoryBean emfb = new LocalContainerEntityManagerFactoryBean();
-        emfb.setDataSource(ctx.getBean("datasource", DataSource.class));
+        emfb.setDataSource(ctx.getBean("spring-demo-db", DataSource.class));
         emfb.setPackagesToScan(new String[] {"com.swisscom.cloud.demo.spring.model"});
         HibernateJpaVendorAdapter adapter = new HibernateJpaVendorAdapter();
         adapter.setGenerateDdl(true);
@@ -97,133 +92,24 @@ public class SpringDemoWebApplication extends WebMvcConfigurerAdapter {
     /**
      * @return Access to relational database system for local deployments
      */
-    @Bean(name="datasource")
-    @Profile(value = {"default"})
-    public DataSource dataSourceDefault() {
-        logger.info("Default Spring Profile");
+    @Bean(name = "spring-demo-db")
+    public DataSource dataSource() {
+        boolean isCloud = Arrays.asList(ctx.getEnvironment().getActiveProfiles()).contains("cloud");
 
+        if (isCloud) {
+            String msg = "DataSource bean has not been auto-reconfigured."
+                    + " Without, the application cannot exist in the Cloud.";
+            logger.error(msg);
+            throw new RuntimeException(msg);
+        }
+
+        logger.info("DataSource instance about to be created");
         DriverManagerDataSource ds = new DriverManagerDataSource();
         ds.setDriverClassName(env.getRequiredProperty("db.driver"));
         ds.setUrl(env.getRequiredProperty("db.url"));
         ds.setUsername(env.getRequiredProperty("db.username"));
         ds.setPassword(env.getRequiredProperty("db.password"));
         return ds;
-    }
-
-    /**
-     * WORKAROUND because Spring reconfiguration framework in Cloud Foundry
-     * Java Buildpack does not (yet, as-of Feb 2014) support auto-reconfiguration
-     * based on annotations declared beans.
-     * 
-     * The first service bound to the application is selected.
-     * If you want to select a different service, for example based on its
-     * name, then modify this code according to your needs.
-     *
-     * @return Access to relational database system for deployments in the cloud
-     */
-    @Bean(name="datasource")
-    @Profile(value = {"cloud"})
-    public DataSource dataSourceCloud() {
-        logger.info("Cloud Spring Profile");
-
-        // TODO: This is a WORKAROUND, should be the buildpack's duty
-        if (System.getenv("VCAP_SERVICES") == null) {
-            logger.error("Your app is not running in a Cloud Foundry environment.");
-            throw new RuntimeException("Not a CloudFoundry environment. Cannot create DataSource");
-        }
-
-        String rawJsonString = System.getenv("VCAP_SERVICES");
-        Map<String, Map<String, String>> info = extractConnectionProperties(rawJsonString);
-        Map<String, String> entry = info.values().iterator().next();
-
-        DriverManagerDataSource ds = new DriverManagerDataSource();
-        ds.setDriverClassName(entry.get("driverClassName"));
-        ds.setUrl(entry.get("url"));
-        ds.setUsername(entry.get("user"));
-        ds.setPassword(entry.get("pass"));
-        return ds;
-    }
-
-    private static final String PRODUCT = "mysql";
-    private static final String DRIVER_CLASSNAME = "com.mysql.jdbc.Driver";
-
-    /**
-     * credentials expected for each service instance:
-     *
-     * - hostname (alternate: host)
-     * - port
-     * - name (alternate: database)
-     * - username
-     * - password
-     *
-     * @param rawJsonString
-     * @return
-     */
-    @SuppressWarnings("unchecked")
-    private Map<String, Map<String, String>> extractConnectionProperties(String rawJsonString) {
-        Map<String, List<Map<String, Object>>> rawJsonMap;
-        try {
-            rawJsonMap = new ObjectMapper().readValue(rawJsonString, Map.class);
-        } catch (Exception ex) {
-            return null;
-        }
-
-        Map<String, Map<String, String>> result = new HashMap<String, Map<String,String>>();
-        for (String key : rawJsonMap.keySet()) {
-            List<Map<String, Object>> list = rawJsonMap.get(key);
-            for (Map<String, Object> element : list) {
-                String serviceName = (String) element.get("name");
-                Map<String, Object> credentials = (Map<String, Object>) element.get("credentials");
-
-                // host
-                String h = (String) credentials.get("hostname");
-                if (h == null) {
-                    h = (String) credentials.get("host");
-                    if (h == null) {
-                        logger.error("service-instance [name = {}] UNDEFINED hostname/host", serviceName);
-                    }
-                }
-
-                // port
-                Integer p = (Integer) credentials.get("port");
-                if (p == null) {
-                    logger.error("service-instance [name = {}] UNDEFINED port", serviceName);
-                }
-
-                // name (database name)
-                String n = (String) credentials.get("name");
-                if (n == null) {
-                    n = (String) credentials.get("database");
-                    if (n == null) {
-                        logger.error("service-instance [name = {}] UNDEFINED database name/database", serviceName);
-                    }
-                }
-
-                String connUrl = "jdbc:" + PRODUCT + "://" + h + ":" + p + "/" + n;
-
-                // username
-                String username = (String) credentials.get("username");
-                if (username == null) {
-                    logger.error("service-instance [name = {}] username unknown", serviceName);
-                }
-
-                //  password
-                String password = (String) credentials.get("password");
-                if (password == null) {
-                    logger.error("service-instance [name = {}] password unknown", serviceName);
-                }
-
-                Map<String, String> entry = new HashMap<String, String>();
-                entry.put("driverClassName", DRIVER_CLASSNAME);
-                entry.put("url", connUrl);
-                entry.put("user", username);
-                entry.put("pass", password);
-
-                logger.debug("service-instance details [service-name = {}, credentials = {}]", serviceName, entry);
-                result.put(serviceName, entry);
-            }
-        }
-        return result;
     }
 
 }
