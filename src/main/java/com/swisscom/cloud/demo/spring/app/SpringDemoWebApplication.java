@@ -40,7 +40,7 @@ import org.springframework.web.servlet.view.UrlBasedViewResolver;
  */
 @Configuration
 @EnableWebMvc
-@EnableJpaRepositories
+@EnableJpaRepositories("com.swisscom.cloud.demo.spring.service")
 @EnableTransactionManagement
 @ComponentScan("com.swisscom.cloud.demo.spring")
 @PropertySource("classpath:application.properties")
@@ -74,7 +74,7 @@ public class SpringDemoWebApplication extends WebMvcConfigurerAdapter {
         return tm;
     }
 
-    @Bean
+    @Bean(name = "entityManagerFactory")
     public LocalContainerEntityManagerFactoryBean entityManagerFactoryBean() {
         LocalContainerEntityManagerFactoryBean emfb = new LocalContainerEntityManagerFactoryBean();
         emfb.setDataSource(ctx.getBean("spring-demo-db", DataSource.class));
