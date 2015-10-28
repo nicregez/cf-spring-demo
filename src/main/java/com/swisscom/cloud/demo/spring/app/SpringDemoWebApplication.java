@@ -4,18 +4,17 @@
  */
 package com.swisscom.cloud.demo.spring.app;
 
-import javax.annotation.Resource;
 import javax.persistence.EntityManagerFactory;
 import javax.sql.DataSource;
 
 import org.hibernate.jpa.HibernatePersistenceProvider;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.context.annotation.PropertySources;
+import org.springframework.context.support.PropertySourcesPlaceholderConfigurer;
 import org.springframework.core.env.Environment;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
@@ -40,16 +39,20 @@ import org.springframework.web.servlet.view.UrlBasedViewResolver;
 @EnableJpaRepositories("com.swisscom.cloud.demo.spring.service")
 @EnableTransactionManagement
 @ComponentScan("com.swisscom.cloud.demo.spring")
-@PropertySource("classpath:application.properties")
+@PropertySources({
+	@PropertySource("classpath:application.properties")})
 public class SpringDemoWebApplication extends WebMvcConfigurerAdapter {
 
-    @Autowired
-    ApplicationContext ctx;
+	/**
+	 * See https://jira.spring.io/browse/SPR-8539 for an explanation why this has to be here as long as properties are replaced with "${}" notation
+	 * and not {@link Environment}.
+	 */
+	@Bean
+	public static PropertySourcesPlaceholderConfigurer propertySourcesPlaceholderConfigurer() {
+		return new PropertySourcesPlaceholderConfigurer();
+	}
 
-    @Resource
-    private Environment env;
-
-    @Override
+	@Override
     public void configureDefaultServletHandling(DefaultServletHandlerConfigurer configurer) {
         configurer.enable();
     }
@@ -71,9 +74,9 @@ public class SpringDemoWebApplication extends WebMvcConfigurerAdapter {
     }
 
     @Bean(name = "entityManagerFactory")
-    public LocalContainerEntityManagerFactoryBean entityManagerFactoryBean() {
+    public LocalContainerEntityManagerFactoryBean entityManagerFactoryBean(DataSource datasource) {
         LocalContainerEntityManagerFactoryBean emfb = new LocalContainerEntityManagerFactoryBean();
-        emfb.setDataSource(ctx.getBean("spring-demo-db", DataSource.class));
+        emfb.setDataSource(datasource);
         emfb.setPackagesToScan(new String[] {"com.swisscom.cloud.demo.spring.model"});
         HibernateJpaVendorAdapter adapter = new HibernateJpaVendorAdapter();
         adapter.setGenerateDdl(true);
@@ -85,41 +88,21 @@ public class SpringDemoWebApplication extends WebMvcConfigurerAdapter {
         return emfb;
     }
 
-//    /**
-//     * @return Access to relational database system for local deployments
-//     */
-//    @Bean(name = "spring-demo-db")
-//    public DataSource dataSource() {
-//        boolean isCloud = Arrays.asList(ctx.getEnvironment().getActiveProfiles()).contains("cloud");
-//
-//        if (isCloud) {
-//            String msg = "DataSource bean has not been auto-reconfigured."
-//                    + " Without, the application cannot exist in the Cloud.";
-//            logger.error(msg);
-//            throw new RuntimeException(msg);
-//        }
-//
-//        logger.info("DataSource instance about to be created");
-//        DriverManagerDataSource ds = new DriverManagerDataSource();
-//        ds.setDriverClassName(env.getRequiredProperty("db.driver"));
-//        ds.setUrl(env.getRequiredProperty("db.url"));
-//        ds.setUsername(env.getRequiredProperty("db.username"));
-//        ds.setPassword(env.getRequiredProperty("db.password"));
-//        return ds;
-//    }
-
+	/**
+	 * @return Access to relational database system for local deployments
+	 */
 	@Bean(name = "spring-demo-db")
-	public DataSource dataSource(
-			@Value("${cloud.services.spring-demo-db.connection.host}") String host,
-			@Value("${cloud.services.spring-demo-db.connection.port}") String port,
-			@Value("${cloud.services.spring-demo-db.connection.name}") String name,
-			@Value("${cloud.services.spring-demo-db.connection.usernam}") String username,
-			@Value("${cloud.services.spring-demo-db.connection.password}") String password) {
+	public DataSource dataSource( //
+			@Value("${db.driver}") String driver, //
+			@Value("${db.url}") String url, //
+			@Value("${db.username}") String username, //
+			@Value("${db.password}") String password) {
 
-		String url = "jdbc:mysql://" + host + ":" + port + "/" + name;
-		DriverManagerDataSource ds = new DriverManagerDataSource(url, username, password);
-		ds.setDriverClassName("com.mysql.jdbc.Driver");
-
+		DriverManagerDataSource ds = new DriverManagerDataSource();
+		ds.setDriverClassName(driver);
+		ds.setUrl(url);
+		ds.setUsername(username);
+		ds.setPassword(password);
 		return ds;
 	}
 
