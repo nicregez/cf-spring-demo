@@ -6,11 +6,13 @@
   <groupId>com.swisscom.cloud.demo</groupId>
   <artifactId>cf-spring-demo</artifactId>
   <packaging>war</packaging>
-  <version>1.0</version>
+  <version>1.1</version>
   <name>cf-spring-demo</name>
 
   <properties>
-    <spring.version>4.0.1.RELEASE</spring.version>
+    <spring.version>4.0.6.RELEASE</spring.version>
+    <spring-data.version>1.7.1.RELEASE</spring-data.version>
+    <hibernate.version>4.3.7.Final</hibernate.version>
     <jdk.version>1.7</jdk.version>
   </properties>
 
@@ -54,23 +56,12 @@
     <dependency>
       <groupId>org.springframework.data</groupId>
       <artifactId>spring-data-jpa</artifactId>
-      <version>1.4.3.RELEASE</version>
+      <version>${spring-data.version}</version>
     </dependency>
     <dependency>
       <groupId>org.hibernate</groupId>
       <artifactId>hibernate-entitymanager</artifactId>
-      <version>4.3.1.Final</version>
-    </dependency>
-    <dependency>
-      <groupId>mysql</groupId>
-      <artifactId>mysql-connector-java</artifactId>
-      <version>5.1.17</version>
-    </dependency>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>3.8.1</version>
-      <scope>test</scope>
+      <version>${hibernate.version}</version>
     </dependency>
   </dependencies>
 

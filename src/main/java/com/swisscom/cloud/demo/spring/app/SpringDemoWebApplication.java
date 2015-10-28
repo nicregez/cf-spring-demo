@@ -4,16 +4,13 @@
  */
 package com.swisscom.cloud.demo.spring.app;
 
-import java.util.Arrays;
-
 import javax.annotation.Resource;
 import javax.persistence.EntityManagerFactory;
 import javax.sql.DataSource;
 
 import org.hibernate.jpa.HibernatePersistenceProvider;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -45,7 +42,6 @@ import org.springframework.web.servlet.view.UrlBasedViewResolver;
 @ComponentScan("com.swisscom.cloud.demo.spring")
 @PropertySource("classpath:application.properties")
 public class SpringDemoWebApplication extends WebMvcConfigurerAdapter {
-    private static final Logger logger = LoggerFactory.getLogger(SpringDemoWebApplication.class);
 
     @Autowired
     ApplicationContext ctx;
@@ -89,27 +85,42 @@ public class SpringDemoWebApplication extends WebMvcConfigurerAdapter {
         return emfb;
     }
 
-    /**
-     * @return Access to relational database system for local deployments
-     */
-    @Bean(name = "spring-demo-db")
-    public DataSource dataSource() {
-        boolean isCloud = Arrays.asList(ctx.getEnvironment().getActiveProfiles()).contains("cloud");
+//    /**
+//     * @return Access to relational database system for local deployments
+//     */
+//    @Bean(name = "spring-demo-db")
+//    public DataSource dataSource() {
+//        boolean isCloud = Arrays.asList(ctx.getEnvironment().getActiveProfiles()).contains("cloud");
+//
+//        if (isCloud) {
+//            String msg = "DataSource bean has not been auto-reconfigured."
+//                    + " Without, the application cannot exist in the Cloud.";
+//            logger.error(msg);
+//            throw new RuntimeException(msg);
+//        }
+//
+//        logger.info("DataSource instance about to be created");
+//        DriverManagerDataSource ds = new DriverManagerDataSource();
+//        ds.setDriverClassName(env.getRequiredProperty("db.driver"));
+//        ds.setUrl(env.getRequiredProperty("db.url"));
+//        ds.setUsername(env.getRequiredProperty("db.username"));
+//        ds.setPassword(env.getRequiredProperty("db.password"));
+//        return ds;
+//    }
 
-        if (isCloud) {
-            String msg = "DataSource bean has not been auto-reconfigured."
-                    + " Without, the application cannot exist in the Cloud.";
-            logger.error(msg);
-            throw new RuntimeException(msg);
-        }
+	@Bean(name = "spring-demo-db")
+	public DataSource dataSource(
+			@Value("${cloud.services.spring-demo-db.connection.host}") String host,
+			@Value("${cloud.services.spring-demo-db.connection.port}") String port,
+			@Value("${cloud.services.spring-demo-db.connection.name}") String name,
+			@Value("${cloud.services.spring-demo-db.connection.usernam}") String username,
+			@Value("${cloud.services.spring-demo-db.connection.password}") String password) {
 
-        logger.info("DataSource instance about to be created");
-        DriverManagerDataSource ds = new DriverManagerDataSource();
-        ds.setDriverClassName(env.getRequiredProperty("db.driver"));
-        ds.setUrl(env.getRequiredProperty("db.url"));
-        ds.setUsername(env.getRequiredProperty("db.username"));
-        ds.setPassword(env.getRequiredProperty("db.password"));
-        return ds;
-    }
+		String url = "jdbc:mysql://" + host + ":" + port + "/" + name;
+		DriverManagerDataSource ds = new DriverManagerDataSource(url, username, password);
+		ds.setDriverClassName("com.mysql.jdbc.Driver");
+
+		return ds;
+	}
 
 }

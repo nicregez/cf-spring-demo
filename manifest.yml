@@ -3,9 +3,9 @@ applications:
 - name: spring-demo
   memory: 512m
   instances: 1
-  host: spring-demo
-  domain: beta.swisscloud.io
-  path: target/cf-spring-demo-1.0.war
-  buildpack: https://github.com/cloudfoundry/java-buildpack
+  host:  spring-demo
+  buildpack: java_buildpack
+  domain: applicationcloud.io
+  path: target/cf-spring-demo-1.1.war
   services:
-    - data
+    - spring-demo-db
